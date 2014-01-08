@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="LIHWEB" default="web" basedir=".">
+
+	<property file="manifest/jdbc.properties" />
+	
+	<property name="build.path" value="build"/>	
+
+	<target name="init" description="Initialize build directory">
+		<mkdir dir="${build.path}"/>
+		<mkdir dir="${build.path}/classes"/>		
+	</target>
+	
+	<path id="master-classpath">
+		<fileset dir="lib">
+			<include name="*.jar"/>
+		</fileset>
+		<pathelement path="build/JUnitclasses"/>
+	</path>
+	
+	<target name="compile" description="Compile Java class files">
+		<antcall target="clean"/>
+		<antcall target="init"/>
+		<javac srcdir="src" destdir="build/classes" debug="true">
+			<exclude name="**/test/Test*.java"/>
+			<classpath>
+				<fileset dir="lib">
+					<include name="*.jar"/>
+				</fileset>
+			</classpath>
+		</javac>
+	</target>
+	
+	<target name="JUnitCompilation" description="Compile JUnit Java class">
+			<antcall target="clean"/>
+			<mkdir dir="${build.path}/JUnitclasses"/>
+			<mkdir dir="build/Reports"/>
+			<javac srcdir="src" destdir="build/JUnitclasses" debug="true">
+				<include name="**/test/Test*.java"/>
+				<classpath refid="master-classpath"/>
+			</javac>
+	</target>
+	
+	<target name="web" description="Create WAR with web content">
+		<antcall target="compile"/>
+		<war destfile="${deploy.path}/lihweb.war" webxml="manifest/web.xml">
+			<zipfileset dir="lib" prefix="WEB-INF/lib">
+				<exclude name="hibernate-core.jar"/>
+				<exclude name="hibernate-jpa-2.0-api.jar"/>
+				<exclude name="servlet-api-2.5.jar"/>
+				<exclude name="postgresql-9.1-901.jdbc4.jar"/>
+				<exclude name="mysql-connector-java-5.1.18-bin.jar"/>
+				<exclude name="javaee-api-5.0-2.jar"/>
+				<exclude name="commons-codec-1.4.jar"/>
+				<exclude name="commons-httpclient-3.0.1.jar"/>
+				<exclude name="commons-logging-1.1.1.jar"/>
+				<exclude name="jersey-apache-client-1.6.jar"/>
+				<exclude name="jersey-client-1.12.jar"/>
+				<exclude name="junit-4.10.jar"/>
+			</zipfileset>
+			<classes dir="build/classes" prefix="WEB-INF/classes">
+			    <exclude name="**/Test*.class" ></exclude>
+				<!-- <include name="**/*.class"/> -->
+			</classes>
+				<zipfileset dir="manifest" prefix="WEB-INF/classes" >
+					<include name="hibernate.cfg.xml" />
+				</zipfileset>
+			
+			<zipfileset dir="manifest" prefix="WEB-INF" >
+				<exclude name="hibernate.cfg.xml" />
+			</zipfileset>
+		</war>
+		
+	</target>
+	
+	<target name="clean" description="Clean all build files">
+		<delete dir="build" />
+	</target>
+	
+	<target name="Run-JUnit Test" depends="JUnitCompilation" description="Run tests">
+			<junit printsummary="true" fork="yes" haltonfailure="false" failureproperty="tests.failed" showoutput="true">
+				<classpath refid="master-classpath"></classpath>
+				<batchtest todir="build/Reports">
+					<fileset dir="src">
+						<include name="**/**/**/test/TestUtility.*"/>
+					</fileset>
+					<formatter type="xml"/>
+				</batchtest>
+			</junit>
+			 <junitreport todir="build">
+			 	  <fileset dir="build/Reports"/>
+			      <report todir="build/test-reports"/>
+		    </junitreport>
+			<fail if="tests.failed" message="Unit test(s) failed.  See reports!"/>
+		</target>
+	
+</project>
